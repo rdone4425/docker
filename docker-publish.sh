@@ -17,54 +17,13 @@ debug_info() {
   echo -e "\n[调试信息] $1"
 }
 
-# 显示交互菜单函数
-show_menu() {
-  echo "========================================================"
-  echo "                    交互菜单"
-  echo "========================================================"
-  echo "脚本将引导您完成以下步骤:"
-  echo "1. 设置Docker镜像名称"
-  echo "2. 配置Docker Hub账号"
-  echo "3. 设置GitHub仓库信息(可选)"
-  echo "4. 构建并发布Docker镜像"
-  echo "5. 清理本地构建环境"
-  echo "========================================================"
-  echo "按回车键继续..."
-  read -r
-  echo ""
-}
-
-# 显示交互菜单
-show_menu
-
 # 从Git仓库获取仓库名
 get_repo_name() {
-  debug_info "正在尝试获取仓库名称..."
-  
   # 检查是否在Git仓库中
   if ! command -v git &> /dev/null || ! git rev-parse --is-inside-work-tree &> /dev/null 2>/dev/null; then
-    debug_info "未检测到Git仓库或git命令不可用"
     # 尝试获取当前目录名作为仓库名
     local dir_name=$(basename "$(pwd)")
-    echo "----------------------------------------"
-    echo "无法从Git仓库获取名称，是否使用当前目录名'$dir_name'作为镜像名? (y/n): "
-    echo "----------------------------------------"
-    read -r use_dir_name
-    
-    if [[ "$use_dir_name" =~ ^[Yy]$ ]]; then
-      echo "$dir_name"
-    else
-      echo "----------------------------------------"
-      echo "请输入镜像名称: "
-      echo "----------------------------------------"
-      read -r custom_name
-      if [ -z "$custom_name" ]; then
-        echo "未提供名称，使用当前目录名'$dir_name'"
-        echo "$dir_name"
-      else
-        echo "$custom_name"
-      fi
-    fi
+    echo "$dir_name"
     return
   fi
   
@@ -72,32 +31,11 @@ get_repo_name() {
   local remote_url=$(git config --get remote.origin.url 2>/dev/null)
   
   if [ -z "$remote_url" ]; then
-    debug_info "Git仓库没有远程URL"
-    # 尝试获取当前目录名作为仓库名
+    # 使用当前目录名作为仓库名
     local dir_name=$(basename "$(pwd)")
-    echo "----------------------------------------"
-    echo "无法获取Git远程仓库URL，是否使用当前目录名'$dir_name'作为镜像名? (y/n): "
-    echo "----------------------------------------"
-    read -r use_dir_name
-    
-    if [[ "$use_dir_name" =~ ^[Yy]$ ]]; then
-      echo "$dir_name"
-    else
-      echo "----------------------------------------"
-      echo "请输入镜像名称: "
-      echo "----------------------------------------"
-      read -r custom_name
-      if [ -z "$custom_name" ]; then
-        echo "未提供名称，使用当前目录名'$dir_name'"
-        echo "$dir_name"
-      else
-        echo "$custom_name"
-      fi
-    fi
+    echo "$dir_name"
     return
   fi
-  
-  debug_info "从Git远程URL获取仓库名: $remote_url"
   
   # 从URL中提取仓库名
   local repo_name=""
@@ -119,7 +57,6 @@ get_repo_name() {
   # 确保名称符合Docker镜像命名规则（小写，只允许字母、数字、连字符）
   repo_name=$(echo "$repo_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
   
-  debug_info "获取到仓库名: $repo_name"
   echo "$repo_name"
 }
 
@@ -204,9 +141,6 @@ save_env() {
 # 加载环境变量
 load_env
 
-# 显示交互菜单
-show_menu
-
 # 设置默认值
 DOCKER_USERNAME=${DOCKER_USERNAME:-""}
 DOCKER_PASSWORD=${DOCKER_PASSWORD:-""}
@@ -268,7 +202,8 @@ fi
 
 # 如果用户名为空或强制输入，则提示输入
 if [ -z "$DOCKER_USERNAME" ] || [ "$FORCE_INPUT" = true ]; then
-  echo -n "请输入您的Docker Hub用户名: "
+  echo "========================================================"
+  echo "请输入您的Docker Hub用户名: "
   read -r DOCKER_USERNAME
   
 if [ -z "$DOCKER_USERNAME" ]; then
@@ -280,7 +215,7 @@ fi
   save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
   
   # 提示输入Docker Hub密码
-  echo -n "请输入您的Docker Hub密码 (将保存到.env文件): "
+  echo "请输入您的Docker Hub密码 (将保存到.env文件): "
   read -rs DOCKER_PASSWORD
   echo # 添加换行
   
@@ -291,11 +226,48 @@ fi
   else
     echo "警告: 未提供Docker Hub密码，登录时可能需要手动输入"
   fi
+else
+  # 显示当前Docker账号信息
+  echo "========================================================"
+  echo "当前Docker账号: $DOCKER_USERNAME"
+  echo "是否切换到其他Docker账号? (y/n): "
+  read -r switch_account
+  
+  if [[ "$switch_account" =~ ^[Yy]$ ]]; then
+    echo "请输入新的Docker Hub用户名: "
+    read -r DOCKER_USERNAME
+    
+    if [ -z "$DOCKER_USERNAME" ]; then
+      echo "错误: 用户名不能为空"
+      exit 1
+    fi
+    
+    # 保存新用户名到.env文件
+    save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
+    
+    # 提示输入新Docker Hub密码
+    echo "请输入新的Docker Hub密码 (将保存到.env文件): "
+    read -rs DOCKER_PASSWORD
+    echo # 添加换行
+    
+    if [ ! -z "$DOCKER_PASSWORD" ]; then
+      # 保存新密码到.env文件
+      save_env "DOCKER_PASSWORD" "$DOCKER_PASSWORD"
+      echo "新的Docker Hub密码已保存"
+    else
+      echo "警告: 未提供Docker Hub密码，登录时可能需要手动输入"
+    fi
+    
+    # 确保登出当前账号
+    echo "正在登出当前Docker账号..."
+    docker logout
+  fi
 fi
 
 # 如果GitHub URL为空或强制输入，则提示输入
 if [ -z "$GITHUB_URL" ] || [ "$FORCE_INPUT" = true ]; then
-  echo -n "请输入GitHub仓库URL (https://github.com/user/repo.git): "
+  echo "========================================================"
+  echo "请输入GitHub仓库URL (https://github.com/user/repo.git): "
   read -r GITHUB_URL
   
   if [ -z "$GITHUB_URL" ]; then
@@ -309,7 +281,7 @@ if [ -z "$GITHUB_URL" ] || [ "$FORCE_INPUT" = true ]; then
       echo "检测到GitHub仓库名: $gh_repo"
       
       # 如果用户确认，使用提取的仓库名作为镜像名
-      echo -n "是否使用 '$gh_repo' 作为镜像名? (y/n): "
+      echo "是否使用 '$gh_repo' 作为镜像名? (y/n): "
       read -r use_repo_name
       
       if [[ "$use_repo_name" =~ ^[Yy]$ ]]; then
