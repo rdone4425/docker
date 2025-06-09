@@ -105,6 +105,7 @@ show_help() {
   echo "  -f, --force               强制重新输入所有信息"
   echo "  -d, --dockerfile PATH     指定Dockerfile路径"
   echo "  -p, --proxy PROXY         指定Docker镜像代理地址"
+  echo "  -s, --set-proxy           设置Docker镜像代理地址"
   echo "  -h, --help                显示此帮助信息"
 }
 
@@ -206,6 +207,49 @@ while [[ $# -gt 0 ]]; do
       shift
       shift
       ;;
+    -s|--set-proxy)
+      echo "========================================================"
+      echo "设置Docker镜像代理地址"
+      echo "常用的Docker镜像代理地址:"
+      echo "1. docker.mirrors.ustc.edu.cn (中科大镜像)"
+      echo "2. dockerhub.azk8s.cn (Azure中国镜像)"
+      echo "3. registry.docker-cn.com (Docker中国镜像)"
+      echo "4. docker.442595.xyz (自定义镜像)"
+      echo "5. 自定义输入"
+      echo "请选择代理地址 (1-5): "
+      read -r proxy_choice
+      
+      case $proxy_choice in
+        1)
+          DOCKER_PROXY="docker.mirrors.ustc.edu.cn"
+          ;;
+        2)
+          DOCKER_PROXY="dockerhub.azk8s.cn"
+          ;;
+        3)
+          DOCKER_PROXY="registry.docker-cn.com"
+          ;;
+        4)
+          DOCKER_PROXY="docker.442595.xyz"
+          ;;
+        5)
+          echo "请输入自定义的Docker镜像代理地址: "
+          read -r DOCKER_PROXY
+          ;;
+        *)
+          echo "无效的选择，不设置代理地址"
+          DOCKER_PROXY=""
+          ;;
+      esac
+      
+      if [ ! -z "$DOCKER_PROXY" ]; then
+        save_env "DOCKER_PROXY" "$DOCKER_PROXY"
+        echo "Docker镜像代理地址已设置为: $DOCKER_PROXY"
+      else
+        echo "未设置Docker镜像代理地址"
+      fi
+      shift
+      ;;
     -h|--help)
       show_help
       exit 0
@@ -251,12 +295,44 @@ fi
     echo "警告: 未提供Docker Hub密码，登录时可能需要手动输入"
   fi
   
-  # 提示输入Docker镜像代理地址
-  echo "请输入Docker镜像代理地址 (留空则不使用代理): "
-  read -r input_proxy
+  # 提示设置Docker镜像代理地址
+  echo "是否需要设置Docker镜像代理地址? (y/n): "
+  read -r set_proxy
   
-  if [ ! -z "$input_proxy" ]; then
-    DOCKER_PROXY="$input_proxy"
+  if [[ "$set_proxy" =~ ^[Yy]$ ]]; then
+    echo "常用的Docker镜像代理地址:"
+    echo "1. docker.mirrors.ustc.edu.cn (中科大镜像)"
+    echo "2. dockerhub.azk8s.cn (Azure中国镜像)"
+    echo "3. registry.docker-cn.com (Docker中国镜像)"
+    echo "4. docker.442595.xyz (自定义镜像)"
+    echo "5. 自定义输入"
+    echo "请选择代理地址 (1-5): "
+    read -r proxy_choice
+    
+    case $proxy_choice in
+      1)
+        DOCKER_PROXY="docker.mirrors.ustc.edu.cn"
+        ;;
+      2)
+        DOCKER_PROXY="dockerhub.azk8s.cn"
+        ;;
+      3)
+        DOCKER_PROXY="registry.docker-cn.com"
+        ;;
+      4)
+        DOCKER_PROXY="docker.442595.xyz"
+        ;;
+      5)
+        echo "请输入自定义的Docker镜像代理地址: "
+        read -r DOCKER_PROXY
+        ;;
+      *)
+        echo "无效的选择，不设置代理地址"
+        DOCKER_PROXY=""
+        ;;
+    esac
+  else
+    DOCKER_PROXY=""
   fi
   
   # 保存代理地址到.env文件
@@ -792,6 +868,7 @@ show_help() {
   echo "  -f, --force               强制重新输入所有信息"
   echo "  -d, --dockerfile PATH     指定Dockerfile路径"
   echo "  -p, --proxy PROXY         指定Docker镜像代理地址"
+  echo "  -s, --set-proxy           设置Docker镜像代理地址"
   echo "  -h, --help                显示此帮助信息"
 }
 
@@ -893,6 +970,49 @@ while [[ $# -gt 0 ]]; do
       shift
       shift
       ;;
+    -s|--set-proxy)
+      echo "========================================================"
+      echo "设置Docker镜像代理地址"
+      echo "常用的Docker镜像代理地址:"
+      echo "1. docker.mirrors.ustc.edu.cn (中科大镜像)"
+      echo "2. dockerhub.azk8s.cn (Azure中国镜像)"
+      echo "3. registry.docker-cn.com (Docker中国镜像)"
+      echo "4. docker.442595.xyz (自定义镜像)"
+      echo "5. 自定义输入"
+      echo "请选择代理地址 (1-5): "
+      read -r proxy_choice
+      
+      case $proxy_choice in
+        1)
+          DOCKER_PROXY="docker.mirrors.ustc.edu.cn"
+          ;;
+        2)
+          DOCKER_PROXY="dockerhub.azk8s.cn"
+          ;;
+        3)
+          DOCKER_PROXY="registry.docker-cn.com"
+          ;;
+        4)
+          DOCKER_PROXY="docker.442595.xyz"
+          ;;
+        5)
+          echo "请输入自定义的Docker镜像代理地址: "
+          read -r DOCKER_PROXY
+          ;;
+        *)
+          echo "无效的选择，不设置代理地址"
+          DOCKER_PROXY=""
+          ;;
+      esac
+      
+      if [ ! -z "$DOCKER_PROXY" ]; then
+        save_env "DOCKER_PROXY" "$DOCKER_PROXY"
+        echo "Docker镜像代理地址已设置为: $DOCKER_PROXY"
+      else
+        echo "未设置Docker镜像代理地址"
+      fi
+      shift
+      ;;
     -h|--help)
       show_help
       exit 0
@@ -938,12 +1058,44 @@ fi
     echo "警告: 未提供Docker Hub密码，登录时可能需要手动输入"
   fi
   
-  # 提示输入Docker镜像代理地址
-  echo "请输入Docker镜像代理地址 (留空则不使用代理): "
-  read -r input_proxy
+  # 提示设置Docker镜像代理地址
+  echo "是否需要设置Docker镜像代理地址? (y/n): "
+  read -r set_proxy
   
-  if [ ! -z "$input_proxy" ]; then
-    DOCKER_PROXY="$input_proxy"
+  if [[ "$set_proxy" =~ ^[Yy]$ ]]; then
+    echo "常用的Docker镜像代理地址:"
+    echo "1. docker.mirrors.ustc.edu.cn (中科大镜像)"
+    echo "2. dockerhub.azk8s.cn (Azure中国镜像)"
+    echo "3. registry.docker-cn.com (Docker中国镜像)"
+    echo "4. docker.442595.xyz (自定义镜像)"
+    echo "5. 自定义输入"
+    echo "请选择代理地址 (1-5): "
+    read -r proxy_choice
+    
+    case $proxy_choice in
+      1)
+        DOCKER_PROXY="docker.mirrors.ustc.edu.cn"
+        ;;
+      2)
+        DOCKER_PROXY="dockerhub.azk8s.cn"
+        ;;
+      3)
+        DOCKER_PROXY="registry.docker-cn.com"
+        ;;
+      4)
+        DOCKER_PROXY="docker.442595.xyz"
+        ;;
+      5)
+        echo "请输入自定义的Docker镜像代理地址: "
+        read -r DOCKER_PROXY
+        ;;
+      *)
+        echo "无效的选择，不设置代理地址"
+        DOCKER_PROXY=""
+        ;;
+    esac
+  else
+    DOCKER_PROXY=""
   fi
   
   # 保存代理地址到.env文件
