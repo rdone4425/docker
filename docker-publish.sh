@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# 显示欢迎信息
+echo "========================================================"
+echo "  Docker镜像构建与发布脚本 v1.0"
+echo "  来源: https://github.com/rdone4425/docker"
+echo "========================================================"
+echo ""
+
 # 配置信息
 ENV_FILE=".env"
 IMAGE_TAG="latest"

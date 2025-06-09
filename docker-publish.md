@@ -20,6 +20,16 @@
 
 首次运行时，脚本会引导您设置必要的配置信息。
 
+### 通过curl直接执行
+
+无需下载脚本，可以直接通过以下命令执行：
+
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh)
+```
+
+这种方式会自动从GitHub获取最新版本的脚本并执行。
+
 ### 命令行选项
 
 ```bash
@@ -49,6 +59,9 @@
 
 # 指定GitHub仓库URL
 ./docker-publish.sh --github-url https://github.com/user/repo.git
+
+# 通过curl执行并指定标签
+bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh) --tag v1.0
 ```
 
 ## 工作流程
