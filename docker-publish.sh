@@ -12,10 +12,9 @@ show_menu() {
   echo "请选择操作:"
   echo "1. 构建并发布Docker镜像"
   echo "2. 设置Docker账号信息"
-  echo "3. 设置GitHub仓库信息"
-  echo "4. 设置Docker镜像代理"
-  echo "5. 查看当前配置"
-  echo "6. 帮助信息"
+  echo "3. 设置Docker镜像代理"
+  echo "4. 查看当前配置"
+  echo "5. 帮助信息"
   echo "0. 退出"
   echo ""
   echo "当前配置:"
@@ -24,7 +23,7 @@ show_menu() {
   [ ! -z "$IMAGE_TAG" ] && echo "镜像标签: $IMAGE_TAG" || echo "镜像标签: latest"
   [ ! -z "$DOCKER_PROXY" ] && echo "镜像代理: $DOCKER_PROXY" || echo "镜像代理: 未设置"
   echo "========================================================"
-  echo "请输入选项 [0-6]: "
+  echo "请输入选项 [0-5]: "
 }
 
 # 配置信息
@@ -270,64 +269,6 @@ set_docker_account() {
   echo ""
 }
 
-# 设置GitHub仓库信息
-set_github_info() {
-  clear
-  echo "========================================================"
-  echo "设置GitHub仓库信息"
-  echo ""
-  
-  if [ ! -z "$GITHUB_URL" ]; then
-    echo "当前GitHub仓库: $GITHUB_URL"
-    echo "是否修改GitHub仓库信息? (y/n): "
-    read -r change_repo
-    
-    if [[ ! "$change_repo" =~ ^[Yy]$ ]]; then
-      return
-    fi
-  fi
-  
-  echo "请输入GitHub仓库URL (https://github.com/user/repo.git): "
-  read -r GITHUB_URL
-  
-  if [ -z "$GITHUB_URL" ]; then
-    echo "警告: 未提供GitHub仓库URL，将使用默认设置"
-    read -p "按任意键继续..." -n1 -s
-    echo ""
-    return
-  fi
-  
-  # 从URL中提取用户名和仓库名
-  read -r gh_user gh_repo <<< "$(extract_from_github_url "$GITHUB_URL")"
-  
-  if [ ! -z "$gh_user" ] && [ ! -z "$gh_repo" ]; then
-    echo "检测到GitHub用户名: $gh_user"
-    echo "检测到GitHub仓库名: $gh_repo"
-    
-    # 如果用户确认，使用提取的仓库名作为镜像名
-    echo "是否使用 '$gh_repo' 作为镜像名? (y/n): "
-    read -r use_repo_name
-    
-    if [[ "$use_repo_name" =~ ^[Yy]$ ]]; then
-      IMAGE_NAME="$gh_repo"
-      echo "已设置镜像名称为: $IMAGE_NAME"
-      save_env "IMAGE_NAME" "$IMAGE_NAME"
-    fi
-    
-    # 保存GitHub用户名
-    GITHUB_USERNAME="$gh_user"
-    save_env "GITHUB_USERNAME" "$GITHUB_USERNAME"
-  else
-    echo "警告: 无法从URL中提取用户名和仓库名"
-  fi
-  
-  # 保存GitHub URL
-  save_env "GITHUB_URL" "$GITHUB_URL"
-  
-  read -p "按任意键继续..." -n1 -s
-  echo ""
-}
-
 # 查看当前配置
 show_config() {
   clear
@@ -337,8 +278,6 @@ show_config() {
   echo "Docker用户名: $DOCKER_USERNAME"
   echo "镜像名称: $IMAGE_NAME"
   echo "镜像标签: $IMAGE_TAG"
-  echo "GitHub仓库: $GITHUB_URL"
-  echo "GitHub用户名: $GITHUB_USERNAME"
   echo "Docker镜像代理: $DOCKER_PROXY"
   echo "Dockerfile路径: $DOCKERFILE_PATH"
   echo "========================================================"
@@ -371,9 +310,6 @@ build_and_publish() {
   echo "镜像名称: $IMAGE_NAME"
   echo "Docker用户名: $DOCKER_USERNAME"
   echo "镜像标签: $IMAGE_TAG"
-  if [ ! -z "$GITHUB_URL" ]; then
-    echo "GitHub仓库: $GITHUB_URL"
-  fi
   
   echo "是否继续构建和发布? (y/n): "
   read -r continue_build
@@ -444,13 +380,9 @@ build_and_publish() {
           DOCKERFILE_PATH="$REPO_NAME/Dockerfile"
           DOCKERFILE_DIR="$REPO_NAME"
           echo "在克隆的仓库中找到Dockerfile: $DOCKERFILE_PATH"
-          
-          # 确保entrypoint脚本可执行
-          if [ -f "$REPO_NAME/docker-entrypoint.sh" ]; then
-            chmod +x "$REPO_NAME/docker-entrypoint.sh"
-          fi
         else
           echo "错误: 在克隆的仓库中找不到Dockerfile"
+          rm -rf "$REPO_NAME"  # 清理目录
           read -p "按任意键继续..." -n1 -s
           echo ""
           return
@@ -722,15 +654,12 @@ interactive_menu() {
         set_docker_account
         ;;
       3)
-        set_github_info
-        ;;
-      4)
         set_docker_proxy
         ;;
-      5)
+      4)
         show_config
         ;;
-      6)
+      5)
         show_help
         ;;
       0)
@@ -740,6 +669,7 @@ interactive_menu() {
       *)
         echo "无效的选择，请重新输入"
         sleep 1
+        ;;
     esac
   done
 }
