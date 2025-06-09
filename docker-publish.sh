@@ -7,13 +7,15 @@ if [[ "$0" == *"/dev/fd/"* ]] || [[ "$0" == "bash" ]]; then
   SCRIPT_NAME="docker-publish.sh"
   if [ ! -f "$SCRIPT_NAME" ]; then
     echo "正在将脚本保存到本地文件: $SCRIPT_NAME"
-    # 从网络源获取脚本内容而不是复制当前执行的内容
-    curl -s https://github.com/rdone4425/docker/raw/main/docker-publish.sh > "$SCRIPT_NAME"
+    # 从网络源获取脚本内容
+    curl -s https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh > "$SCRIPT_NAME"
     chmod +x "$SCRIPT_NAME"
     echo "脚本已保存为 $SCRIPT_NAME 并设置为可执行"
     echo "下次可以直接运行 ./$SCRIPT_NAME"
     echo "现在继续执行..."
-    exec "./$SCRIPT_NAME" "$@"
+    echo "========================================================"
+    # 直接执行脚本而不是使用exec
+    bash "./$SCRIPT_NAME" "$@"
     exit 0
   fi
 fi
