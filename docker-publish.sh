@@ -12,19 +12,51 @@ echo ""
 ENV_FILE=".env"
 IMAGE_TAG="latest"
 
+# 调试信息函数
+debug_info() {
+  echo -e "\n[调试信息] $1"
+}
+
+# 显示交互菜单函数
+show_menu() {
+  echo "========================================================"
+  echo "                    交互菜单"
+  echo "========================================================"
+  echo "脚本将引导您完成以下步骤:"
+  echo "1. 设置Docker镜像名称"
+  echo "2. 配置Docker Hub账号"
+  echo "3. 设置GitHub仓库信息(可选)"
+  echo "4. 构建并发布Docker镜像"
+  echo "5. 清理本地构建环境"
+  echo "========================================================"
+  echo "按回车键继续..."
+  read -r
+  echo ""
+}
+
+# 显示交互菜单
+show_menu
+
 # 从Git仓库获取仓库名
 get_repo_name() {
+  debug_info "正在尝试获取仓库名称..."
+  
   # 检查是否在Git仓库中
-  if ! command -v git &> /dev/null || ! git rev-parse --is-inside-work-tree &> /dev/null; then
+  if ! command -v git &> /dev/null || ! git rev-parse --is-inside-work-tree &> /dev/null 2>/dev/null; then
+    debug_info "未检测到Git仓库或git命令不可用"
     # 尝试获取当前目录名作为仓库名
     local dir_name=$(basename "$(pwd)")
-    echo -n "无法从Git仓库获取名称，是否使用当前目录名'$dir_name'作为镜像名? (y/n): "
+    echo "----------------------------------------"
+    echo "无法从Git仓库获取名称，是否使用当前目录名'$dir_name'作为镜像名? (y/n): "
+    echo "----------------------------------------"
     read -r use_dir_name
     
     if [[ "$use_dir_name" =~ ^[Yy]$ ]]; then
       echo "$dir_name"
     else
-      echo -n "请输入镜像名称: "
+      echo "----------------------------------------"
+      echo "请输入镜像名称: "
+      echo "----------------------------------------"
       read -r custom_name
       if [ -z "$custom_name" ]; then
         echo "未提供名称，使用当前目录名'$dir_name'"
@@ -40,15 +72,20 @@ get_repo_name() {
   local remote_url=$(git config --get remote.origin.url 2>/dev/null)
   
   if [ -z "$remote_url" ]; then
+    debug_info "Git仓库没有远程URL"
     # 尝试获取当前目录名作为仓库名
     local dir_name=$(basename "$(pwd)")
-    echo -n "无法获取Git远程仓库URL，是否使用当前目录名'$dir_name'作为镜像名? (y/n): "
+    echo "----------------------------------------"
+    echo "无法获取Git远程仓库URL，是否使用当前目录名'$dir_name'作为镜像名? (y/n): "
+    echo "----------------------------------------"
     read -r use_dir_name
     
     if [[ "$use_dir_name" =~ ^[Yy]$ ]]; then
       echo "$dir_name"
     else
-      echo -n "请输入镜像名称: "
+      echo "----------------------------------------"
+      echo "请输入镜像名称: "
+      echo "----------------------------------------"
       read -r custom_name
       if [ -z "$custom_name" ]; then
         echo "未提供名称，使用当前目录名'$dir_name'"
@@ -59,6 +96,8 @@ get_repo_name() {
     fi
     return
   fi
+  
+  debug_info "从Git远程URL获取仓库名: $remote_url"
   
   # 从URL中提取仓库名
   local repo_name=""
@@ -80,6 +119,7 @@ get_repo_name() {
   # 确保名称符合Docker镜像命名规则（小写，只允许字母、数字、连字符）
   repo_name=$(echo "$repo_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
   
+  debug_info "获取到仓库名: $repo_name"
   echo "$repo_name"
 }
 
@@ -163,6 +203,9 @@ save_env() {
 
 # 加载环境变量
 load_env
+
+# 显示交互菜单
+show_menu
 
 # 设置默认值
 DOCKER_USERNAME=${DOCKER_USERNAME:-""}
