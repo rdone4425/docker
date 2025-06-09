@@ -514,7 +514,43 @@ echo "镜像标记成功!"
 echo -e "\n===== 步骤3: 登录Docker Hub ====="
 # 检查是否已经登录
 if [ -f "$HOME/.docker/config.json" ] && grep -q "auth" "$HOME/.docker/config.json"; then
-  echo "检测到Docker已登录，跳过登录步骤..."
+  echo "检测到Docker已登录，是否重新登录? (y/n): "
+  read -r relogin
+  
+  if [[ "$relogin" =~ ^[Yy]$ ]]; then
+    echo "正在登出当前Docker账号..."
+    docker logout
+    
+    echo "请输入Docker Hub用户名 (默认: $DOCKER_USERNAME): "
+    read -r new_username
+    if [ ! -z "$new_username" ]; then
+      DOCKER_USERNAME="$new_username"
+      save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
+    fi
+    
+    echo "请输入Docker Hub密码: "
+    read -rs DOCKER_PASSWORD
+    echo # 添加换行
+    
+    if [ ! -z "$DOCKER_PASSWORD" ]; then
+      # 保存密码到.env文件
+      save_env "DOCKER_PASSWORD" "$DOCKER_PASSWORD"
+      # 使用新密码登录
+      echo "使用新凭据登录Docker Hub..."
+      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    else
+      echo "请手动输入Docker Hub密码:"
+      docker login -u $DOCKER_USERNAME
+    fi
+    
+    if [ $? -ne 0 ]; then
+      echo "错误: 登录Docker Hub失败"
+      exit 1
+    fi
+    echo "登录成功!"
+  else
+    echo "继续使用当前登录状态..."
+  fi
 else
   if [ ! -z "$DOCKER_PASSWORD" ]; then
     # 使用保存的密码自动登录
@@ -522,24 +558,81 @@ else
     echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   else
     # 手动输入密码
-echo "请输入您的Docker Hub密码:"
-docker login -u $DOCKER_USERNAME
+    echo "请输入您的Docker Hub密码:"
+    docker login -u $DOCKER_USERNAME
   fi
   
-if [ $? -ne 0 ]; then
-  echo "错误: 登录Docker Hub失败"
-  exit 1
-fi
-echo "登录成功!"
+  if [ $? -ne 0 ]; then
+    echo "错误: 登录Docker Hub失败"
+    exit 1
+  fi
+  echo "登录成功!"
 fi
 
 # 推送镜像到Docker Hub
 echo -e "\n===== 步骤4: 推送镜像到Docker Hub ====="
 docker push $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG
-if [ $? -ne 0 ]; then
-  echo "错误: 推送镜像失败"
-  exit 1
+push_status=$?
+
+if [ $push_status -ne 0 ]; then
+  echo -e "\n错误: 推送镜像失败 (错误码: $push_status)"
+  echo "可能的原因:"
+  echo "1. Docker Hub登录凭据无效或已过期"
+  echo "2. 您没有权限推送到仓库 $DOCKER_USERNAME/$IMAGE_NAME"
+  echo "3. 仓库可能不存在，需要先在Docker Hub创建"
+  
+  echo -e "\n是否尝试重新登录并推送? (y/n): "
+  read -r retry_push
+  
+  if [[ "$retry_push" =~ ^[Yy]$ ]]; then
+    echo "正在登出当前Docker账号..."
+    docker logout
+    
+    echo "请输入Docker Hub用户名: "
+    read -r DOCKER_USERNAME
+    save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
+    
+    echo "请输入Docker Hub密码: "
+    read -rs DOCKER_PASSWORD
+    echo # 添加换行
+    
+    if [ ! -z "$DOCKER_PASSWORD" ]; then
+      save_env "DOCKER_PASSWORD" "$DOCKER_PASSWORD"
+    fi
+    
+    # 重新标记镜像
+    echo "重新标记镜像为 $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+    docker tag $IMAGE_NAME $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG
+    
+    # 重新登录
+    echo "重新登录Docker Hub..."
+    if [ ! -z "$DOCKER_PASSWORD" ]; then
+      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    else
+      docker login -u $DOCKER_USERNAME
+    fi
+    
+    if [ $? -ne 0 ]; then
+      echo "错误: 登录Docker Hub失败"
+      exit 1
+    fi
+    
+    # 重新推送
+    echo "重新推送镜像..."
+    docker push $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG
+    
+    if [ $? -ne 0 ]; then
+      echo "错误: 推送镜像再次失败"
+      echo "请检查您是否已在Docker Hub创建了仓库 $DOCKER_USERNAME/$IMAGE_NAME"
+      echo "或者尝试手动执行: docker push $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+      exit 1
+    fi
+  else
+    echo "推送失败，退出脚本"
+    exit 1
+  fi
 fi
+
 echo "镜像推送成功!"
 
 # 保存标签到环境变量
@@ -1101,7 +1194,43 @@ echo "镜像标记成功!"
 echo -e "\n===== 步骤3: 登录Docker Hub ====="
 # 检查是否已经登录
 if [ -f "$HOME/.docker/config.json" ] && grep -q "auth" "$HOME/.docker/config.json"; then
-  echo "检测到Docker已登录，跳过登录步骤..."
+  echo "检测到Docker已登录，是否重新登录? (y/n): "
+  read -r relogin
+  
+  if [[ "$relogin" =~ ^[Yy]$ ]]; then
+    echo "正在登出当前Docker账号..."
+    docker logout
+    
+    echo "请输入Docker Hub用户名 (默认: $DOCKER_USERNAME): "
+    read -r new_username
+    if [ ! -z "$new_username" ]; then
+      DOCKER_USERNAME="$new_username"
+      save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
+    fi
+    
+    echo "请输入Docker Hub密码: "
+    read -rs DOCKER_PASSWORD
+    echo # 添加换行
+    
+    if [ ! -z "$DOCKER_PASSWORD" ]; then
+      # 保存密码到.env文件
+      save_env "DOCKER_PASSWORD" "$DOCKER_PASSWORD"
+      # 使用新密码登录
+      echo "使用新凭据登录Docker Hub..."
+      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    else
+      echo "请手动输入Docker Hub密码:"
+      docker login -u $DOCKER_USERNAME
+    fi
+    
+    if [ $? -ne 0 ]; then
+      echo "错误: 登录Docker Hub失败"
+      exit 1
+    fi
+    echo "登录成功!"
+  else
+    echo "继续使用当前登录状态..."
+  fi
 else
   if [ ! -z "$DOCKER_PASSWORD" ]; then
     # 使用保存的密码自动登录
@@ -1109,24 +1238,81 @@ else
     echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   else
     # 手动输入密码
-echo "请输入您的Docker Hub密码:"
-docker login -u $DOCKER_USERNAME
+    echo "请输入您的Docker Hub密码:"
+    docker login -u $DOCKER_USERNAME
   fi
   
-if [ $? -ne 0 ]; then
-  echo "错误: 登录Docker Hub失败"
-  exit 1
-fi
-echo "登录成功!"
+  if [ $? -ne 0 ]; then
+    echo "错误: 登录Docker Hub失败"
+    exit 1
+  fi
+  echo "登录成功!"
 fi
 
 # 推送镜像到Docker Hub
 echo -e "\n===== 步骤4: 推送镜像到Docker Hub ====="
 docker push $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG
-if [ $? -ne 0 ]; then
-  echo "错误: 推送镜像失败"
-  exit 1
+push_status=$?
+
+if [ $push_status -ne 0 ]; then
+  echo -e "\n错误: 推送镜像失败 (错误码: $push_status)"
+  echo "可能的原因:"
+  echo "1. Docker Hub登录凭据无效或已过期"
+  echo "2. 您没有权限推送到仓库 $DOCKER_USERNAME/$IMAGE_NAME"
+  echo "3. 仓库可能不存在，需要先在Docker Hub创建"
+  
+  echo -e "\n是否尝试重新登录并推送? (y/n): "
+  read -r retry_push
+  
+  if [[ "$retry_push" =~ ^[Yy]$ ]]; then
+    echo "正在登出当前Docker账号..."
+    docker logout
+    
+    echo "请输入Docker Hub用户名: "
+    read -r DOCKER_USERNAME
+    save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
+    
+    echo "请输入Docker Hub密码: "
+    read -rs DOCKER_PASSWORD
+    echo # 添加换行
+    
+    if [ ! -z "$DOCKER_PASSWORD" ]; then
+      save_env "DOCKER_PASSWORD" "$DOCKER_PASSWORD"
+    fi
+    
+    # 重新标记镜像
+    echo "重新标记镜像为 $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+    docker tag $IMAGE_NAME $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG
+    
+    # 重新登录
+    echo "重新登录Docker Hub..."
+    if [ ! -z "$DOCKER_PASSWORD" ]; then
+      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    else
+      docker login -u $DOCKER_USERNAME
+    fi
+    
+    if [ $? -ne 0 ]; then
+      echo "错误: 登录Docker Hub失败"
+      exit 1
+    fi
+    
+    # 重新推送
+    echo "重新推送镜像..."
+    docker push $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG
+    
+    if [ $? -ne 0 ]; then
+      echo "错误: 推送镜像再次失败"
+      echo "请检查您是否已在Docker Hub创建了仓库 $DOCKER_USERNAME/$IMAGE_NAME"
+      echo "或者尝试手动执行: docker push $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+      exit 1
+    fi
+  else
+    echo "推送失败，退出脚本"
+    exit 1
+  fi
 fi
+
 echo "镜像推送成功!"
 
 # 保存标签到环境变量
