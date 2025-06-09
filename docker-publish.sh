@@ -620,43 +620,7 @@ echo "镜像标记成功!"
 echo -e "\n===== 步骤3: 登录Docker Hub ====="
 # 检查是否已经登录
 if [ -f "$HOME/.docker/config.json" ] && grep -q "auth" "$HOME/.docker/config.json"; then
-  echo "检测到Docker已登录，是否重新登录? (y/n): "
-  read -r relogin
-  
-  if [[ "$relogin" =~ ^[Yy]$ ]]; then
-    echo "正在登出当前Docker账号..."
-    docker logout
-    
-    echo "请输入Docker Hub用户名 (默认: $DOCKER_USERNAME): "
-    read -r new_username
-    if [ ! -z "$new_username" ]; then
-      DOCKER_USERNAME="$new_username"
-      save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
-    fi
-    
-    echo "请输入Docker Hub密码: "
-    read -rs DOCKER_PASSWORD
-    echo # 添加换行
-    
-    if [ ! -z "$DOCKER_PASSWORD" ]; then
-      # 保存密码到.env文件
-      save_env "DOCKER_PASSWORD" "$DOCKER_PASSWORD"
-      # 使用新密码登录
-      echo "使用新凭据登录Docker Hub..."
-      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-    else
-      echo "请手动输入Docker Hub密码:"
-      docker login -u $DOCKER_USERNAME
-    fi
-    
-    if [ $? -ne 0 ]; then
-      echo "错误: 登录Docker Hub失败"
-      exit 1
-    fi
-    echo "登录成功!"
-  else
-    echo "继续使用当前登录状态..."
-  fi
+  echo "检测到Docker已登录，跳过登录步骤..."
 else
   if [ ! -z "$DOCKER_PASSWORD" ]; then
     # 使用保存的密码自动登录
@@ -1413,43 +1377,7 @@ echo "镜像标记成功!"
 echo -e "\n===== 步骤3: 登录Docker Hub ====="
 # 检查是否已经登录
 if [ -f "$HOME/.docker/config.json" ] && grep -q "auth" "$HOME/.docker/config.json"; then
-  echo "检测到Docker已登录，是否重新登录? (y/n): "
-  read -r relogin
-  
-  if [[ "$relogin" =~ ^[Yy]$ ]]; then
-    echo "正在登出当前Docker账号..."
-    docker logout
-    
-    echo "请输入Docker Hub用户名 (默认: $DOCKER_USERNAME): "
-    read -r new_username
-    if [ ! -z "$new_username" ]; then
-      DOCKER_USERNAME="$new_username"
-      save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
-    fi
-    
-    echo "请输入Docker Hub密码: "
-    read -rs DOCKER_PASSWORD
-    echo # 添加换行
-    
-    if [ ! -z "$DOCKER_PASSWORD" ]; then
-      # 保存密码到.env文件
-      save_env "DOCKER_PASSWORD" "$DOCKER_PASSWORD"
-      # 使用新密码登录
-      echo "使用新凭据登录Docker Hub..."
-      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-    else
-      echo "请手动输入Docker Hub密码:"
-      docker login -u $DOCKER_USERNAME
-    fi
-    
-    if [ $? -ne 0 ]; then
-      echo "错误: 登录Docker Hub失败"
-      exit 1
-    fi
-    echo "登录成功!"
-  else
-    echo "继续使用当前登录状态..."
-  fi
+  echo "检测到Docker已登录，跳过登录步骤..."
 else
   if [ ! -z "$DOCKER_PASSWORD" ]; then
     # 使用保存的密码自动登录
