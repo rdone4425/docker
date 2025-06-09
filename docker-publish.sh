@@ -11,6 +11,8 @@ echo ""
 # 配置信息
 ENV_FILE=".env"
 IMAGE_TAG="latest"
+DOCKERFILE_PATH="./Dockerfile"
+DOCKERFILE_DIR="."
 
 # 调试信息函数
 debug_info() {
@@ -89,12 +91,14 @@ show_help() {
   echo "  -n, --name NAME            指定镜像名称 (默认: 从Git仓库名获取)"
   echo "  -g, --github-url URL       指定GitHub仓库URL"
   echo "  -f, --force                强制重新输入所有信息"
+  echo "  -d, --dockerfile PATH      指定Dockerfile路径"
   echo "  -h, --help                 显示帮助信息"
   echo "例子:"
   echo "  $0 --username johndoe --tag v1.0"
   echo "  $0 --tag v2.0              # 使用保存的用户名"
   echo "  $0 --name custom-name      # 使用自定义镜像名称"
   echo "  $0 --github-url https://github.com/user/repo.git"
+  echo "  $0 --dockerfile ./path/to/Dockerfile  # 指定Dockerfile路径"
 }
 
 # 加载.env文件中的环境变量
@@ -180,6 +184,12 @@ while [[ $# -gt 0 ]]; do
       ;;
     -f|--force)
       FORCE_INPUT=true
+      shift
+      ;;
+    -d|--dockerfile)
+      DOCKERFILE_PATH="$2"
+      DOCKERFILE_DIR=$(dirname "$DOCKERFILE_PATH")
+      shift
       shift
       ;;
     -h|--help)
@@ -312,9 +322,41 @@ if [ ! -z "$GITHUB_URL" ]; then
   echo "GitHub仓库: $GITHUB_URL"
 fi
 
+# 检查Dockerfile是否存在
+if [ ! -f "$DOCKERFILE_PATH" ]; then
+  # 从GitHub URL中提取仓库名
+  REPO_NAME=""
+  if [ ! -z "$GITHUB_URL" ]; then
+    read -r gh_user gh_repo <<< "$(extract_from_github_url "$GITHUB_URL")"
+    if [ ! -z "$gh_repo" ]; then
+      REPO_NAME="$gh_repo"
+    fi
+  fi
+  
+  # 如果有仓库名，尝试在该目录中查找Dockerfile
+  if [ ! -z "$REPO_NAME" ] && [ -f "$REPO_NAME/Dockerfile" ]; then
+    DOCKERFILE_PATH="$REPO_NAME/Dockerfile"
+    DOCKERFILE_DIR="$REPO_NAME"
+    echo "在 $REPO_NAME 目录中找到Dockerfile"
+  # 尝试在当前目录的子目录中查找
+  elif [ -f "$IMAGE_NAME/Dockerfile" ]; then
+    DOCKERFILE_PATH="$IMAGE_NAME/Dockerfile"
+    DOCKERFILE_DIR="$IMAGE_NAME"
+    echo "在 $IMAGE_NAME 目录中找到Dockerfile"
+  else
+    echo "错误: 找不到Dockerfile，请确保Dockerfile存在或使用 --dockerfile 选项指定路径"
+    echo "尝试查找的位置:"
+    echo "  - $DOCKERFILE_PATH"
+    echo "  - $REPO_NAME/Dockerfile (如果有GitHub URL)"
+    echo "  - $IMAGE_NAME/Dockerfile"
+    exit 1
+  fi
+fi
+
 # 构建Docker镜像
 echo -e "\n===== 步骤1: 构建Docker镜像 ====="
-docker build -t $IMAGE_NAME .
+echo "使用Dockerfile: $DOCKERFILE_PATH"
+docker build -t $IMAGE_NAME -f "$DOCKERFILE_PATH" "$DOCKERFILE_DIR"
 if [ $? -ne 0 ]; then
   echo "错误: 构建Docker镜像失败"
   exit 1
