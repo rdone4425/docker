@@ -9,7 +9,23 @@ IMAGE_TAG="latest"
 get_repo_name() {
   # 检查是否在Git仓库中
   if ! command -v git &> /dev/null || ! git rev-parse --is-inside-work-tree &> /dev/null; then
-    echo "file-monitor-app" # 默认名称
+    # 尝试获取当前目录名作为仓库名
+    local dir_name=$(basename "$(pwd)")
+    echo -n "无法从Git仓库获取名称，是否使用当前目录名'$dir_name'作为镜像名? (y/n): "
+    read -r use_dir_name
+    
+    if [[ "$use_dir_name" =~ ^[Yy]$ ]]; then
+      echo "$dir_name"
+    else
+      echo -n "请输入镜像名称: "
+      read -r custom_name
+      if [ -z "$custom_name" ]; then
+        echo "未提供名称，使用当前目录名'$dir_name'"
+        echo "$dir_name"
+      else
+        echo "$custom_name"
+      fi
+    fi
     return
   fi
   
@@ -19,7 +35,21 @@ get_repo_name() {
   if [ -z "$remote_url" ]; then
     # 尝试获取当前目录名作为仓库名
     local dir_name=$(basename "$(pwd)")
-    echo "$dir_name"
+    echo -n "无法获取Git远程仓库URL，是否使用当前目录名'$dir_name'作为镜像名? (y/n): "
+    read -r use_dir_name
+    
+    if [[ "$use_dir_name" =~ ^[Yy]$ ]]; then
+      echo "$dir_name"
+    else
+      echo -n "请输入镜像名称: "
+      read -r custom_name
+      if [ -z "$custom_name" ]; then
+        echo "未提供名称，使用当前目录名'$dir_name'"
+        echo "$dir_name"
+      else
+        echo "$custom_name"
+      fi
+    fi
     return
   fi
   
@@ -191,10 +221,10 @@ if [ -z "$DOCKER_USERNAME" ] || [ "$FORCE_INPUT" = true ]; then
   echo -n "请输入您的Docker Hub用户名: "
   read -r DOCKER_USERNAME
   
-  if [ -z "$DOCKER_USERNAME" ]; then
+if [ -z "$DOCKER_USERNAME" ]; then
     echo "错误: 用户名不能为空"
-    exit 1
-  fi
+  exit 1
+fi
   
   # 保存用户名到.env文件
   save_env "DOCKER_USERNAME" "$DOCKER_USERNAME"
@@ -290,15 +320,15 @@ else
     echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   else
     # 手动输入密码
-    echo "请输入您的Docker Hub密码:"
-    docker login -u $DOCKER_USERNAME
+echo "请输入您的Docker Hub密码:"
+docker login -u $DOCKER_USERNAME
   fi
   
-  if [ $? -ne 0 ]; then
-    echo "错误: 登录Docker Hub失败"
-    exit 1
-  fi
-  echo "登录成功!"
+if [ $? -ne 0 ]; then
+  echo "错误: 登录Docker Hub失败"
+  exit 1
+fi
+echo "登录成功!"
 fi
 
 # 推送镜像到Docker Hub
@@ -312,6 +342,24 @@ echo "镜像推送成功!"
 
 # 保存标签到环境变量
 save_env "DOCKER_TAG" "$IMAGE_TAG"
+
+# 删除本地构建环境中的镜像
+echo -e "\n===== 步骤5: 删除本地镜像 ====="
+echo "正在删除本地镜像: $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+docker rmi $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG
+if [ $? -ne 0 ]; then
+  echo "警告: 删除标记的镜像失败"
+else
+  echo "标记的镜像删除成功!"
+fi
+
+echo "正在删除本地镜像: $IMAGE_NAME"
+docker rmi $IMAGE_NAME
+if [ $? -ne 0 ]; then
+  echo "警告: 删除基础镜像失败"
+else
+  echo "基础镜像删除成功!"
+fi
 
 echo -e "\n===== 完成! ====="
 echo "镜像已成功发布到Docker Hub: $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
