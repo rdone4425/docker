@@ -11,6 +11,7 @@
 - 配置信息持久化保存到`.env`文件
 - 智能查找Dockerfile位置，支持多种项目结构
 - 支持切换Docker账号
+- **自动克隆GitHub仓库**，无需手动下载项目文件
 
 ## 使用方法
 
@@ -60,7 +61,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-p
 # 使用自定义镜像名称
 ./docker-publish.sh --name custom-name
 
-# 指定GitHub仓库URL
+# 指定GitHub仓库URL，自动克隆仓库并构建
 ./docker-publish.sh --github-url https://github.com/user/repo.git
 
 # 指定Dockerfile路径
@@ -79,22 +80,44 @@ bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-p
    - 解析命令行参数
    - 获取或提示输入必要信息
 
-2. **构建镜像**：
+2. **获取项目文件**：
+   - 检查本地是否存在Dockerfile
+   - 如果不存在且提供了GitHub URL，自动克隆整个仓库
+
+3. **构建镜像**：
    - 自动查找Dockerfile位置
    - 使用`docker build`命令构建本地镜像
 
-3. **标记镜像**：
+4. **标记镜像**：
    - 使用`docker tag`命令标记镜像，格式为`用户名/镜像名:标签`
 
-4. **登录Docker Hub**：
+5. **登录Docker Hub**：
    - 使用保存的凭据或提示输入密码登录Docker Hub
 
-5. **推送镜像**：
+6. **推送镜像**：
    - 使用`docker push`命令将镜像推送到Docker Hub
 
-6. **清理本地镜像**：
+7. **清理本地镜像**：
    - 删除标记的镜像（`用户名/镜像名:标签`）
    - 删除基础镜像（`镜像名`）
+
+## 自动克隆GitHub仓库
+
+当脚本无法在本地找到Dockerfile但提供了GitHub URL时，会自动执行以下操作：
+
+1. 从GitHub URL中提取仓库名称
+2. 创建对应的本地目录（如果已存在则先删除）
+3. 使用`git clone`命令克隆整个仓库
+4. 如果git命令不可用，则使用curl或wget下载必要文件：
+   - Dockerfile
+   - package.json和package-lock.json
+   - docker-compose.yml
+   - docker-entrypoint.sh（并设置为可执行）
+   - .dockerignore
+   - .env.example
+   - 创建基本目录结构并下载基本文件
+
+这样，用户只需提供GitHub仓库URL，脚本就能自动获取所有必要的项目文件，无需手动下载或克隆仓库。
 
 ## Dockerfile查找逻辑
 
@@ -104,7 +127,8 @@ bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-p
 2. 如果未指定，尝试在当前目录中查找`Dockerfile`
 3. 如果未找到，尝试在从GitHub URL提取的仓库名目录中查找
 4. 如果仍未找到，尝试在镜像名目录中查找
-5. 如果所有位置都未找到Dockerfile，脚本会显示错误信息并退出
+5. 如果所有位置都未找到Dockerfile，尝试从GitHub克隆仓库
+6. 如果仍然找不到，脚本会显示错误信息并退出
 
 ## 镜像命名逻辑
 
@@ -143,4 +167,5 @@ bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-p
 - 首次使用时需要提供Docker Hub凭据
 - 推荐在Git仓库目录中运行，以便自动获取仓库名称
 - 本地镜像会在推送成功后自动删除，如需保留请修改脚本
-- 如果项目结构复杂，建议使用`--dockerfile`选项直接指定Dockerfile路径 
+- 如果项目结构复杂，建议使用`--dockerfile`选项直接指定Dockerfile路径
+- 自动克隆功能需要git命令可用，如果不可用会尝试使用curl/wget下载基本文件 

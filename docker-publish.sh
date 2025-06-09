@@ -349,7 +349,95 @@ if [ ! -f "$DOCKERFILE_PATH" ]; then
     echo "  - $DOCKERFILE_PATH"
     echo "  - $REPO_NAME/Dockerfile (如果有GitHub URL)"
     echo "  - $IMAGE_NAME/Dockerfile"
-    exit 1
+    
+    # 如果有GitHub URL但找不到Dockerfile，尝试从GitHub下载
+    if [ ! -z "$GITHUB_URL" ] && [ ! -z "$REPO_NAME" ]; then
+      echo "本地未找到Dockerfile，尝试克隆整个项目..."
+      
+      # 创建仓库目录（如果不存在）
+      if [ -d "$REPO_NAME" ]; then
+        echo "目录 $REPO_NAME 已存在，将先删除..."
+        rm -rf "$REPO_NAME"
+      fi
+      
+      echo "克隆仓库 $GITHUB_URL 到 $REPO_NAME 目录..."
+      if command -v git &> /dev/null; then
+        git clone "$GITHUB_URL" "$REPO_NAME"
+        if [ $? -ne 0 ]; then
+          echo "错误: 克隆仓库失败"
+          exit 1
+        fi
+        echo "仓库克隆成功!"
+      else
+        echo "错误: 需要git命令来克隆仓库"
+        echo "尝试使用curl下载必要文件..."
+        
+        # 如果git不可用，尝试使用curl下载
+        mkdir -p "$REPO_NAME"
+        
+        # 构建raw GitHub URL
+        RAW_URL="${GITHUB_URL/github.com/raw.githubusercontent.com}"
+        RAW_URL="${RAW_URL%.git}/main"
+        
+        echo "从 $RAW_URL 下载文件..."
+        
+        # 下载Dockerfile
+        if command -v curl &> /dev/null; then
+          curl -s -o "$REPO_NAME/Dockerfile" "$RAW_URL/Dockerfile"
+        elif command -v wget &> /dev/null; then
+          wget -q -O "$REPO_NAME/Dockerfile" "$RAW_URL/Dockerfile"
+        else
+          echo "错误: 需要curl或wget来下载文件"
+          exit 1
+        fi
+        
+        # 检查下载是否成功
+        if [ ! -f "$REPO_NAME/Dockerfile" ] || [ ! -s "$REPO_NAME/Dockerfile" ]; then
+          echo "错误: Dockerfile下载失败或为空"
+          rm -rf "$REPO_NAME"
+          exit 1
+        fi
+        
+        # 下载其他常用文件
+        for file in package.json package-lock.json docker-compose.yml docker-entrypoint.sh .dockerignore .env.example; do
+          if command -v curl &> /dev/null; then
+            curl -s -o "$REPO_NAME/$file" "$RAW_URL/$file" || echo "注意: $file 不存在或无法下载"
+          elif command -v wget &> /dev/null; then
+            wget -q -O "$REPO_NAME/$file" "$RAW_URL/$file" || echo "注意: $file 不存在或无法下载"
+          fi
+        done
+        
+        # 创建基本目录结构
+        mkdir -p "$REPO_NAME/src" "$REPO_NAME/public" "$REPO_NAME/views" "$REPO_NAME/routes" "$REPO_NAME/models"
+        
+        # 尝试下载基本目录中的文件
+        for dir in src public views routes models; do
+          # 尝试下载index文件
+          if command -v curl &> /dev/null; then
+            curl -s -o "$REPO_NAME/$dir/index.js" "$RAW_URL/$dir/index.js" || echo "注意: $dir/index.js 不存在或无法下载"
+          elif command -v wget &> /dev/null; then
+            wget -q -O "$REPO_NAME/$dir/index.js" "$RAW_URL/$dir/index.js" || echo "注意: $dir/index.js 不存在或无法下载"
+          fi
+        done
+        
+        echo "基本文件下载完成（注意：这不是完整的项目，只包含基本文件）"
+      fi
+      
+      # 检查Dockerfile是否存在
+      if [ -f "$REPO_NAME/Dockerfile" ]; then
+        DOCKERFILE_PATH="$REPO_NAME/Dockerfile"
+        DOCKERFILE_DIR="$REPO_NAME"
+        echo "在克隆的仓库中找到Dockerfile: $DOCKERFILE_PATH"
+        
+        # 确保entrypoint脚本可执行
+        if [ -f "$REPO_NAME/docker-entrypoint.sh" ]; then
+          chmod +x "$REPO_NAME/docker-entrypoint.sh"
+        fi
+      else
+        echo "错误: 在克隆的仓库中找不到Dockerfile"
+        exit 1
+      fi
+    fi
   fi
 fi
 
