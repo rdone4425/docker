@@ -384,10 +384,40 @@ else
     
     if [[ "$change_proxy" =~ ^[Yy]$ ]]; then
       echo "当前Docker镜像代理地址: $DOCKER_PROXY"
-      echo "请输入新的Docker镜像代理地址 (留空则不使用代理): "
-      read -r input_proxy
+      echo "常用的Docker镜像代理地址:"
+      echo "1. docker.mirrors.ustc.edu.cn (中科大镜像)"
+      echo "2. dockerhub.azk8s.cn (Azure中国镜像)"
+      echo "3. registry.docker-cn.com (Docker中国镜像)"
+      echo "4. docker.442595.xyz (自定义镜像)"
+      echo "5. 自定义输入"
+      echo "6. 不使用代理"
+      echo "请选择代理地址 (1-6): "
+      read -r proxy_choice
       
-      DOCKER_PROXY="$input_proxy"
+      case $proxy_choice in
+        1)
+          DOCKER_PROXY="docker.mirrors.ustc.edu.cn"
+          ;;
+        2)
+          DOCKER_PROXY="dockerhub.azk8s.cn"
+          ;;
+        3)
+          DOCKER_PROXY="registry.docker-cn.com"
+          ;;
+        4)
+          DOCKER_PROXY="docker.442595.xyz"
+          ;;
+        5)
+          echo "请输入自定义的Docker镜像代理地址: "
+          read -r DOCKER_PROXY
+          ;;
+        6)
+          DOCKER_PROXY=""
+          ;;
+        *)
+          echo "无效的选择，保持当前代理设置"
+          ;;
+      esac
       
       # 保存代理地址到.env文件
       save_env "DOCKER_PROXY" "$DOCKER_PROXY"
@@ -1147,10 +1177,40 @@ else
     
     if [[ "$change_proxy" =~ ^[Yy]$ ]]; then
       echo "当前Docker镜像代理地址: $DOCKER_PROXY"
-      echo "请输入新的Docker镜像代理地址 (留空则不使用代理): "
-      read -r input_proxy
+      echo "常用的Docker镜像代理地址:"
+      echo "1. docker.mirrors.ustc.edu.cn (中科大镜像)"
+      echo "2. dockerhub.azk8s.cn (Azure中国镜像)"
+      echo "3. registry.docker-cn.com (Docker中国镜像)"
+      echo "4. docker.442595.xyz (自定义镜像)"
+      echo "5. 自定义输入"
+      echo "6. 不使用代理"
+      echo "请选择代理地址 (1-6): "
+      read -r proxy_choice
       
-      DOCKER_PROXY="$input_proxy"
+      case $proxy_choice in
+        1)
+          DOCKER_PROXY="docker.mirrors.ustc.edu.cn"
+          ;;
+        2)
+          DOCKER_PROXY="dockerhub.azk8s.cn"
+          ;;
+        3)
+          DOCKER_PROXY="registry.docker-cn.com"
+          ;;
+        4)
+          DOCKER_PROXY="docker.442595.xyz"
+          ;;
+        5)
+          echo "请输入自定义的Docker镜像代理地址: "
+          read -r DOCKER_PROXY
+          ;;
+        6)
+          DOCKER_PROXY=""
+          ;;
+        *)
+          echo "无效的选择，保持当前代理设置"
+          ;;
+      esac
       
       # 保存代理地址到.env文件
       save_env "DOCKER_PROXY" "$DOCKER_PROXY"
