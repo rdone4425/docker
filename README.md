@@ -7,11 +7,13 @@
 - 自动从Git仓库获取项目名称作为Docker镜像名
 - 支持用户交互式设置镜像名称
 - 自动登录Docker Hub并推送镜像
-- 自动清理本地构建环境中的镜像
+- 自动清理本地构建环境中的镜像和仓库目录
 - 配置信息持久化保存到`.env`文件
 - 智能查找Dockerfile位置，支持多种项目结构
 - 支持切换Docker账号
 - **自动克隆GitHub仓库**，无需手动下载项目文件
+- **提供镜像代理加速下载**，解决国内网络问题
+- **自动清理下载的仓库**，节省磁盘空间
 
 ## 使用方法
 
@@ -101,6 +103,10 @@ bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-p
    - 删除标记的镜像（`用户名/镜像名:标签`）
    - 删除基础镜像（`镜像名`）
 
+8. **清理仓库目录**：
+   - 删除从GitHub克隆或下载的仓库目录
+   - 释放磁盘空间
+
 ## 自动克隆GitHub仓库
 
 当脚本无法在本地找到Dockerfile但提供了GitHub URL时，会自动执行以下操作：
@@ -161,6 +167,20 @@ bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-p
 - 镜像名称（`IMAGE_NAME`）
 - 镜像标签（`DOCKER_TAG`）
 
+## 使用镜像代理加速
+
+对于国内用户，从Docker Hub拉取镜像可能会比较慢。脚本提供了使用镜像代理的方式来加速下载：
+
+```bash
+# 直接从Docker Hub拉取
+docker pull username/imagename:tag
+
+# 使用镜像代理加速
+docker pull docker.442595.xyz/username/imagename:tag
+```
+
+镜像代理服务由 [docker.442595.xyz](https://docker.442595.xyz/) 提供，可以显著提高国内网络环境下的镜像下载速度。
+
 ## 注意事项
 
 - 脚本需要Docker已安装并可用
@@ -168,4 +188,5 @@ bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-p
 - 推荐在Git仓库目录中运行，以便自动获取仓库名称
 - 本地镜像会在推送成功后自动删除，如需保留请修改脚本
 - 如果项目结构复杂，建议使用`--dockerfile`选项直接指定Dockerfile路径
-- 自动克隆功能需要git命令可用，如果不可用会尝试使用curl/wget下载基本文件 
+- 自动克隆功能需要git命令可用，如果不可用会尝试使用curl/wget下载基本文件
+- 如果遇到网络问题，可以使用镜像代理加速下载 

@@ -13,6 +13,7 @@ ENV_FILE=".env"
 IMAGE_TAG="latest"
 DOCKERFILE_PATH="./Dockerfile"
 DOCKERFILE_DIR="."
+DOCKER_PROXY=""
 
 # 调试信息函数
 debug_info() {
@@ -84,21 +85,16 @@ extract_from_github_url() {
 
 # 显示帮助信息
 show_help() {
-  echo "使用方法: $0 [选项]"
+  echo "用法: $0 [选项]"
   echo "选项:"
-  echo "  -u, --username USERNAME    指定Docker Hub用户名 (会保存到.env文件中)"
-  echo "  -t, --tag TAG              指定镜像标签 (默认: latest)"
-  echo "  -n, --name NAME            指定镜像名称 (默认: 从Git仓库名获取)"
-  echo "  -g, --github-url URL       指定GitHub仓库URL"
-  echo "  -f, --force                强制重新输入所有信息"
-  echo "  -d, --dockerfile PATH      指定Dockerfile路径"
-  echo "  -h, --help                 显示帮助信息"
-  echo "例子:"
-  echo "  $0 --username johndoe --tag v1.0"
-  echo "  $0 --tag v2.0              # 使用保存的用户名"
-  echo "  $0 --name custom-name      # 使用自定义镜像名称"
-  echo "  $0 --github-url https://github.com/user/repo.git"
-  echo "  $0 --dockerfile ./path/to/Dockerfile  # 指定Dockerfile路径"
+  echo "  -u, --username USERNAME   指定Docker Hub用户名"
+  echo "  -t, --tag TAG             指定镜像标签 (默认: latest)"
+  echo "  -n, --name NAME           指定镜像名称 (默认: 从当前目录名或GitHub仓库名获取)"
+  echo "  -g, --github-url URL      指定GitHub仓库URL"
+  echo "  -f, --force               强制重新输入所有信息"
+  echo "  -d, --dockerfile PATH     指定Dockerfile路径"
+  echo "  -p, --proxy PROXY         指定Docker镜像代理地址"
+  echo "  -h, --help                显示此帮助信息"
 }
 
 # 加载.env文件中的环境变量
@@ -152,6 +148,7 @@ GITHUB_URL=${GITHUB_URL:-""}
 FORCE_INPUT=${FORCE_INPUT:-false}
 IMAGE_NAME=${IMAGE_NAME:-"$(get_repo_name)"}
 GITHUB_USERNAME=${GITHUB_USERNAME:-""}
+DOCKER_PROXY=${DOCKER_PROXY:-""}
 
 # 如果设置了DOCKER_TAG环境变量，则使用它
 if [ ! -z "$DOCKER_TAG" ]; then
@@ -189,6 +186,12 @@ while [[ $# -gt 0 ]]; do
     -d|--dockerfile)
       DOCKERFILE_PATH="$2"
       DOCKERFILE_DIR=$(dirname "$DOCKERFILE_PATH")
+      shift
+      shift
+      ;;
+    -p|--proxy)
+      DOCKER_PROXY="$2"
+      save_env "DOCKER_PROXY" "$DOCKER_PROXY"
       shift
       shift
       ;;
@@ -236,6 +239,22 @@ fi
   else
     echo "警告: 未提供Docker Hub密码，登录时可能需要手动输入"
   fi
+  
+  # 提示输入Docker镜像代理地址
+  echo "请输入Docker镜像代理地址 (留空则不使用代理): "
+  read -r input_proxy
+  
+  if [ ! -z "$input_proxy" ]; then
+    DOCKER_PROXY="$input_proxy"
+  fi
+  
+  # 保存代理地址到.env文件
+  save_env "DOCKER_PROXY" "$DOCKER_PROXY"
+  if [ ! -z "$DOCKER_PROXY" ]; then
+    echo "Docker镜像代理地址已设置为: $DOCKER_PROXY"
+  else
+    echo "未设置Docker镜像代理地址"
+  fi
 else
   # 显示当前Docker账号信息
   echo "========================================================"
@@ -271,6 +290,26 @@ else
     # 确保登出当前账号
     echo "正在登出当前Docker账号..."
     docker logout
+    
+    # 提示输入Docker镜像代理地址
+    echo "是否需要修改Docker镜像代理地址? (y/n): "
+    read -r change_proxy
+    
+    if [[ "$change_proxy" =~ ^[Yy]$ ]]; then
+      echo "当前Docker镜像代理地址: $DOCKER_PROXY"
+      echo "请输入新的Docker镜像代理地址 (留空则不使用代理): "
+      read -r input_proxy
+      
+      DOCKER_PROXY="$input_proxy"
+      
+      # 保存代理地址到.env文件
+      save_env "DOCKER_PROXY" "$DOCKER_PROXY"
+      if [ ! -z "$DOCKER_PROXY" ]; then
+        echo "Docker镜像代理地址已设置为: $DOCKER_PROXY"
+      else
+        echo "未设置Docker镜像代理地址"
+      fi
+    fi
   fi
 fi
 
@@ -513,8 +552,27 @@ else
   echo "基础镜像删除成功!"
 fi
 
+# 删除下载的仓库目录
+echo -e "\n===== 步骤6: 清理下载的仓库 ====="
+# 检查是否是从GitHub下载的仓库
+if [ ! -z "$GITHUB_URL" ] && [ ! -z "$REPO_NAME" ] && [ -d "$REPO_NAME" ] && [ "$DOCKERFILE_DIR" = "$REPO_NAME" ]; then
+  echo "正在删除下载的仓库目录: $REPO_NAME"
+  rm -rf "$REPO_NAME"
+  if [ $? -ne 0 ]; then
+    echo "警告: 删除仓库目录失败"
+  else
+    echo "仓库目录删除成功!"
+  fi
+fi
+
 echo -e "\n===== 完成! ====="
 echo "镜像已成功发布到Docker Hub: $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
 echo "您可以使用以下命令拉取此镜像:"
-echo "docker pull $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG" 
-echo -e "\n下次运行只需执行: $0" 
+echo "docker pull $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+
+if [ ! -z "$DOCKER_PROXY" ]; then
+  echo -e "\n如果下载速度较慢，可以使用镜像代理加速:"
+  echo "docker pull $DOCKER_PROXY/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+fi
+
+echo -e "\n下次运行只需执行: ./docker-publish.sh" 
