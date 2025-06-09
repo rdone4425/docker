@@ -673,8 +673,15 @@ echo -e "\n===== 完成! ====="
 echo "镜像已成功发布到Docker Hub: $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
 echo "您可以使用以下命令拉取此镜像:"
 echo "docker pull $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
-echo -e "\n如果下载速度较慢，可以使用镜像代理加速:"
-echo "docker pull $DOCKER_PROXY/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+
+if [ ! -z "$DOCKER_PROXY" ]; then
+  echo -e "\n如果下载速度较慢，可以使用镜像代理加速:"
+  echo "docker pull $DOCKER_PROXY/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+else
+  echo -e "\n如果下载速度较慢，可以使用镜像代理加速 (请先设置代理地址):"
+  echo "docker pull <代理地址>/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+  echo "例如: docker pull docker.mirrors.ustc.edu.cn/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+fi
 
 # 获取脚本的真实路径
 REAL_SCRIPT_PATH="./docker-publish.sh"
@@ -1353,8 +1360,15 @@ echo -e "\n===== 完成! ====="
 echo "镜像已成功发布到Docker Hub: $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
 echo "您可以使用以下命令拉取此镜像:"
 echo "docker pull $DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
-echo -e "\n如果下载速度较慢，可以使用镜像代理加速:"
-echo "docker pull $DOCKER_PROXY/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+
+if [ ! -z "$DOCKER_PROXY" ]; then
+  echo -e "\n如果下载速度较慢，可以使用镜像代理加速:"
+  echo "docker pull $DOCKER_PROXY/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+else
+  echo -e "\n如果下载速度较慢，可以使用镜像代理加速 (请先设置代理地址):"
+  echo "docker pull <代理地址>/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+  echo "例如: docker pull docker.mirrors.ustc.edu.cn/$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+fi
 
 # 获取脚本的真实路径
 REAL_SCRIPT_PATH="./docker-publish.sh"
