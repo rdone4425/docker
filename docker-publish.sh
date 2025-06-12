@@ -330,25 +330,15 @@ build_and_push() {
     cd "$REPO_NAME"
     IMAGE_NAME="$REPO_NAME:$VERSION"
     OFFICIAL_IMAGE_NAME="$DOCKER_USER/$REPO_NAME:$VERSION"
-    docker buildx build --platform linux/amd64,linux/arm64 -t "$OFFICIAL_IMAGE_NAME" --push .
-    if [ $? -ne 0 ]; then
-        echo "镜像构建失败！"
-        cd ..
-        rm -rf "$REPO_NAME"
-        return
-    fi
-    # 代理镜像名称
     PROXY_IMAGE_NAME="$PROXY_REGISTRY/$DOCKER_USER/$REPO_NAME:$VERSION"
     
-    # 标记和推送到官方仓库
-    docker tag "$IMAGE_NAME" "$OFFICIAL_IMAGE_NAME"
-    echo "正在推送镜像到官方Docker Hub..."
-    docker push "$OFFICIAL_IMAGE_NAME"
-    
+    # 直接构建并推送到官方仓库
+    docker buildx build --platform linux/amd64,linux/arm64 -t "$OFFICIAL_IMAGE_NAME" --push .
     if [ $? -eq 0 ]; then
         echo "镜像上传成功：$OFFICIAL_IMAGE_NAME"
-        echo "同时标记为代理仓库镜像：$PROXY_IMAGE_NAME"
-        docker tag "$IMAGE_NAME" "$PROXY_IMAGE_NAME"
+        # 直接构建并推送到代理仓库
+        docker buildx build --platform linux/amd64,linux/arm64 -t "$PROXY_IMAGE_NAME" --push .
+        echo "镜像也已上传到代理仓库：$PROXY_IMAGE_NAME"
         
         # 记录构建历史
         timestamp=$(date "+%Y-%m-%d %H:%M:%S")
@@ -372,12 +362,6 @@ build_and_push() {
     cd ..
     echo "正在删除本地仓库目录 $REPO_NAME ..."
     rm -rf "$REPO_NAME"
-    echo "正在删除本地镜像..."
-    docker rmi "$IMAGE_NAME"
-    docker rmi "$OFFICIAL_IMAGE_NAME"
-    if docker image inspect "$PROXY_IMAGE_NAME" &>/dev/null; then
-        docker rmi "$PROXY_IMAGE_NAME"
-    fi
 }
 
 show_build_history() {
