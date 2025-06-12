@@ -1,192 +1,138 @@
-# Docker镜像构建与发布脚本使用指南
+# Docker 镜像管理工具使用手册
 
-## 功能概述
+## 快速安装
 
-`docker-publish.sh`是一个功能完善的Bash脚本，用于自动化Docker镜像的构建、标记、发布和清理过程。该脚本具有以下主要功能：
-
-- 自动从Git仓库获取项目名称作为Docker镜像名
-- 支持用户交互式设置镜像名称
-- 自动登录Docker Hub并推送镜像
-- 自动清理本地构建环境中的镜像和仓库目录
-- 配置信息持久化保存到`.env`文件
-- 智能查找Dockerfile位置，支持多种项目结构
-- 支持切换Docker账号
-- **自动克隆GitHub仓库**，无需手动下载项目文件
-- **提供镜像代理加速下载**，解决国内网络问题
-- **自动清理下载的仓库**，节省磁盘空间
-
-## 使用方法
-
-### 基本用法
-
-```bash
-./docker-publish.sh
-```
-
-首次运行时，脚本会引导您设置必要的配置信息。
-
-### 通过curl直接执行
-
-无需下载脚本，可以直接通过以下命令执行：
+使用以下命令一键安装并运行：
 
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh)
 ```
 
-这种方式会自动从GitHub获取最新版本的脚本并执行。
+此命令会自动下载并执行最新版本的脚本，无需手动下载和设置权限。
 
-### 命令行选项
+## 简介
 
-```bash
-./docker-publish.sh [选项]
-```
+本工具是一个用于简化 Docker 镜像构建、上传和管理的命令行脚本。它提供了以下主要功能：
 
-| 选项 | 说明 |
-|------|------|
-| `-u, --username USERNAME` | 指定Docker Hub用户名 |
-| `-t, --tag TAG` | 指定镜像标签（默认：latest） |
-| `-n, --name NAME` | 指定镜像名称（默认：从Git仓库名获取） |
-| `-g, --github-url URL` | 指定GitHub仓库URL |
-| `-d, --dockerfile PATH` | 指定Dockerfile路径 |
-| `-f, --force` | 强制重新输入所有信息 |
-| `-h, --help` | 显示帮助信息 |
+- 从 GitHub 仓库自动构建 Docker 镜像
+- 自动管理镜像版本号
+- 同时推送到官方 Docker Hub 和加速镜像仓库
+- 测试和选择最快的镜像仓库
+- 记录和查看构建历史
+- 生成镜像拉取和运行命令
 
-### 示例
+## 安装和设置
 
-```bash
-# 使用指定用户名和标签
-./docker-publish.sh --username johndoe --tag v1.0
+1. 下载脚本：
+   ```bash
+   wget https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh
+   chmod +x docker-publish.sh
+   ```
 
-# 使用保存的用户名，指定新标签
-./docker-publish.sh --tag v2.0
+2. 初次运行时，脚本会引导您设置 Docker Hub 账号和密码。
 
-# 使用自定义镜像名称
-./docker-publish.sh --name custom-name
+## 主要功能
 
-# 指定GitHub仓库URL，自动克隆仓库并构建
-./docker-publish.sh --github-url https://github.com/user/repo.git
+### 1. 登录镜像仓库
 
-# 指定Dockerfile路径
-./docker-publish.sh --dockerfile ./path/to/Dockerfile
+登录到 Docker Hub，以便能够推送镜像。账号信息会保存在本地配置文件中，后续无需重复输入。
 
-# 通过curl执行并指定标签
-bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh) --tag v1.0
-```
+### 2. 从 GitHub 构建并上传镜像
 
-## 工作流程
+- 自动从 GitHub 仓库克隆代码
+- 构建 Docker 镜像
+- 自动检查版本号并递增
+- 推送到官方 Docker Hub
+- 同时推送到代理镜像仓库
+- 清理构建过程中的临时文件
+- 提供拉取和运行命令
 
-脚本执行以下步骤：
+### 3. 设置版本号
 
-1. **配置准备**：
-   - 加载`.env`文件中的环境变量
-   - 解析命令行参数
-   - 获取或提示输入必要信息
+管理镜像版本号，可以手动设置或使用自动递增功能。
 
-2. **获取项目文件**：
-   - 检查本地是否存在Dockerfile
-   - 如果不存在且提供了GitHub URL，自动克隆整个仓库
+### 4. 镜像仓库设置
 
-3. **构建镜像**：
-   - 自动查找Dockerfile位置
-   - 使用`docker build`命令构建本地镜像
+- 从预定义列表中选择镜像仓库
+- 手动设置自定义镜像仓库
+- 测试不同镜像仓库的速度，选择最快的仓库
 
-4. **标记镜像**：
-   - 使用`docker tag`命令标记镜像，格式为`用户名/镜像名:标签`
+### 5. 构建历史与拉取命令
 
-5. **登录Docker Hub**：
-   - 使用保存的凭据或提示输入密码登录Docker Hub
+- 查看最近的构建历史记录
+- 获取特定镜像的拉取和运行命令
 
-6. **推送镜像**：
-   - 使用`docker push`命令将镜像推送到Docker Hub
+## 使用示例
 
-7. **清理本地镜像**：
-   - 删除标记的镜像（`用户名/镜像名:标签`）
-   - 删除基础镜像（`镜像名`）
-
-8. **清理仓库目录**：
-   - 删除从GitHub克隆或下载的仓库目录
-   - 释放磁盘空间
-
-## 自动克隆GitHub仓库
-
-当脚本无法在本地找到Dockerfile但提供了GitHub URL时，会自动执行以下操作：
-
-1. 从GitHub URL中提取仓库名称
-2. 创建对应的本地目录（如果已存在则先删除）
-3. 使用`git clone`命令克隆整个仓库
-4. 如果git命令不可用，则使用curl或wget下载必要文件：
-   - Dockerfile
-   - package.json和package-lock.json
-   - docker-compose.yml
-   - docker-entrypoint.sh（并设置为可执行）
-   - .dockerignore
-   - .env.example
-   - 创建基本目录结构并下载基本文件
-
-这样，用户只需提供GitHub仓库URL，脚本就能自动获取所有必要的项目文件，无需手动下载或克隆仓库。
-
-## Dockerfile查找逻辑
-
-脚本会按照以下顺序查找Dockerfile：
-
-1. 首先检查是否通过`--dockerfile`选项指定了Dockerfile路径
-2. 如果未指定，尝试在当前目录中查找`Dockerfile`
-3. 如果未找到，尝试在从GitHub URL提取的仓库名目录中查找
-4. 如果仍未找到，尝试在镜像名目录中查找
-5. 如果所有位置都未找到Dockerfile，尝试从GitHub克隆仓库
-6. 如果仍然找不到，脚本会显示错误信息并退出
-
-## 镜像命名逻辑
-
-脚本会尝试通过以下方式获取镜像名称：
-
-1. 首先检查命令行参数中是否指定了名称
-2. 如果未指定，尝试从Git仓库获取名称：
-   - 如果是GitHub仓库，提取仓库名
-   - 如果是其他Git仓库，提取最后一个路径组件
-3. 如果无法从Git获取名称：
-   - 使用当前目录名作为默认名称
-
-## Docker账号管理
-
-脚本支持以下Docker账号管理功能：
-
-1. 首次运行时，提示输入Docker Hub用户名和密码
-2. 后续运行时，使用保存的凭据自动登录
-3. 可以随时切换到其他Docker账号，无需重新运行脚本或修改配置文件
-4. 切换账号时会自动登出当前账号，确保凭据安全
-
-## 配置持久化
-
-脚本会将以下配置信息保存到`.env`文件中：
-
-- Docker Hub用户名（`DOCKER_USERNAME`）
-- Docker Hub密码（`DOCKER_PASSWORD`）
-- GitHub仓库URL（`GITHUB_URL`）
-- GitHub用户名（`GITHUB_USERNAME`）
-- 镜像名称（`IMAGE_NAME`）
-- 镜像标签（`DOCKER_TAG`）
-
-## 使用镜像代理加速
-
-对于国内用户，从Docker Hub拉取镜像可能会比较慢。脚本提供了使用镜像代理的方式来加速下载：
+### 构建并上传镜像
 
 ```bash
-# 直接从Docker Hub拉取
-docker pull username/imagename:tag
+# 使用一键安装命令
+bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh)
 
-# 使用镜像代理加速
-docker pull docker.442595.xyz/username/imagename:tag
+# 或者如果已下载脚本
+./docker-publish.sh
+
+# 选择选项 2，然后输入 GitHub 仓库地址
 ```
 
-镜像代理服务由 [docker.442595.xyz](https://docker.442595.xyz/) 提供，可以显著提高国内网络环境下的镜像下载速度。
+### 查看构建历史
+
+```bash
+# 使用一键安装命令
+bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh)
+
+# 选择选项 5，然后根据提示操作
+```
+
+### 测试镜像仓库速度
+
+```bash
+# 使用一键安装命令
+bash <(curl -Ls https://raw.githubusercontent.com/rdone4425/docker/main/docker-publish.sh)
+
+# 选择选项 4，然后选择"测试镜像仓库速度"
+```
+
+## 配置文件
+
+脚本使用以下配置文件保存状态：
+
+- `.docker_config`: 保存 Docker Hub 账号信息
+- `.version_config`: 保存当前版本号
+- `.registry_config`: 保存当前使用的镜像仓库
+- `.build_history`: 保存构建历史记录
+
+## 镜像拉取命令
+
+脚本提供了两种拉取命令：
+
+1. 通过代理仓库拉取（推荐，速度更快）：
+   ```bash
+   docker pull <代理仓库地址>/<用户名>/<仓库名>:<版本号>
+   ```
+
+2. 通过官方仓库拉取：
+   ```bash
+   docker pull <用户名>/<仓库名>:<版本号>
+   ```
+
+## 运行容器命令
+
+脚本同时提供了容器运行命令：
+
+```bash
+docker run -d --name <应用名称> <镜像地址>
+```
+
+如果需要映射端口或挂载卷，可以使用：
+
+```bash
+docker run -d --name <应用名称> -p <主机端口>:<容器端口> <镜像地址>
+```
 
 ## 注意事项
 
-- 脚本需要Docker已安装并可用
-- 首次使用时需要提供Docker Hub凭据
-- 推荐在Git仓库目录中运行，以便自动获取仓库名称
-- 本地镜像会在推送成功后自动删除，如需保留请修改脚本
-- 如果项目结构复杂，建议使用`--dockerfile`选项直接指定Dockerfile路径
-- 自动克隆功能需要git命令可用，如果不可用会尝试使用curl/wget下载基本文件
-- 如果遇到网络问题，可以使用镜像代理加速下载 
+- 脚本需要有 Docker 和 Git 环境
+- 需要有 Docker Hub 账号
+- 确保有足够的权限构建和推送镜像
