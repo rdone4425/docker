@@ -280,6 +280,21 @@ build_and_push() {
     read -p "请输入GitHub仓库地址（例如 https://github.com/yourname/yourrepo.git）: " GIT_URL
     REPO_NAME=$(basename -s .git "$GIT_URL")
     
+    # 检查 buildx 是否可用
+    if ! docker buildx version &>/dev/null; then
+        echo "未检测到 buildx，请升级 Docker 到最新版本。"
+        exit 1
+    fi
+
+    # 检查当前 builder 是否支持多平台
+    current_builder=$(docker buildx inspect | grep 'Driver:' | awk '{print $2}')
+    if [ "$current_builder" != "docker-container" ]; then
+        echo "当前 buildx builder 不支持多平台，正在自动创建并切换..."
+        docker buildx create --use --name mybuilder
+        docker buildx inspect --bootstrap
+        echo "已自动切换到支持多平台的 builder。"
+    fi
+    
     # 检查当前版本是否可用，如果不可用则自动增加版本号
     check_version_available() {
         local current_version=$1
@@ -314,15 +329,14 @@ build_and_push() {
     fi
     cd "$REPO_NAME"
     IMAGE_NAME="$REPO_NAME:$VERSION"
-    docker buildx build --platform linux/amd64,linux/arm64 -t "$IMAGE_NAME" --push .
+    OFFICIAL_IMAGE_NAME="$DOCKER_USER/$REPO_NAME:$VERSION"
+    docker buildx build --platform linux/amd64,linux/arm64 -t "$OFFICIAL_IMAGE_NAME" --push .
     if [ $? -ne 0 ]; then
         echo "镜像构建失败！"
         cd ..
         rm -rf "$REPO_NAME"
         return
     fi
-    # 官方镜像名称
-    OFFICIAL_IMAGE_NAME="$DOCKER_USER/$REPO_NAME:$VERSION"
     # 代理镜像名称
     PROXY_IMAGE_NAME="$PROXY_REGISTRY/$DOCKER_USER/$REPO_NAME:$VERSION"
     
